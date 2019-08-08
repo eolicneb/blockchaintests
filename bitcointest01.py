@@ -2,11 +2,19 @@ from cryptos import *
 from pprint import pprint
 import threading
 from time import time
+from random import randint, shuffle
 
 def get_tx(n, txid, reg_list, currency):
-    reg_list[n] = currency.fetchtx(txid)
+    try:
+        reg_list[n] = currency.fetchtx(txid)
+    except Exception:
+        reg_list[n] = {'error': 'direccion no valida.'}
+
+with open('txid_list.txt','r') as tl:
+    txid_list = tl.read().split('\n')
 
 c = Bitcoin()
+
 # priv = sha256('a big long brainwallet password')
 # pub = c.privtopub(priv)
 # addr = c.pubtoaddr(pub)
@@ -16,7 +24,7 @@ li = [ '' for _ in range(N) ]
 for n in range(N):
     th = threading.Thread(target=get_tx,
                         args=(n,
-                        "4e77a5b181d3027bed2924dc06d63d204405533ff41f3b33e834e12ac4856fd8",
+                        txid_list[randint(0,len(txid_list)-1)],
                         li,
                         c))
     th.start()
@@ -27,5 +35,8 @@ p_thread = threading.main_thread()
 for th in threading.enumerate():
     if th is not p_thread:
         th.join()
-print(li)
-print((time()-t_ini)/N)
+t_end = (time()-t_ini)/N
+for n, l in enumerate(li):
+    print(n,':')
+    pprint(l)
+print(t_end)
