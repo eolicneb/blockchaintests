@@ -1,0 +1,22 @@
+method      Function
+
+095ea7b3    approve(address _spender, uint256 _amount)
+1801fbe5    mint(uint256 nonce, bytes32 challenge_digest)
+a9059cbb    transfer(address _to, uint256 _value)
+453e4237    
+7b9c67ff    
+
+23b872dd    transferFrom(address _from, address _to, uint256 _value)    0xdaa95589994667db30c09914a27f995d399136ef4af32f8770ee4fe806806e46
+b1954e95    countRecommend(uint256 startLength, uint256 endLength, uint256 times)
+d3140a65    createOpenLockAndDraw(address registry_, address tub_, uint256 wad) 0x526af336d614ade5cc252a407062b8861af998f5  ['SaiProxyCreateAndExecute']
+
+
+3d7d3f5a    createSaleAuction(uint256 _kittyId, uint256 _startingPrice, uint256 _endingPrice, uint256 _duration)
+
+
+5e83b463    placeBet(uint256 betMask, uint256 modulo, uint256 commitLastBlock, uint256 commit, bytes32 r, bytes32 s)
+68c180d5    submitMiningSolution(string _nonce, uint256 _requestId, uint256 _value)
+9ad73f20    runPluginSigned(address _pluginAddress, uint40 _signId, uint40 _cutieId, uint128 _value, uint256 _parameter, uint8 _v, bytes32 _r, bytes32 _s)
+39125215    sendMultiSig(address toAddress, uint256 value, bytes data, uint256 expireTime, uint256 sequenceId, bytes signature)
+
+ef343588    trade(uint256[8] tradeValues, address[4] tradeAddresses, uint8[2] v, bytes32[4] rs)
