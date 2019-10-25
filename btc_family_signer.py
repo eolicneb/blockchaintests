@@ -75,5 +75,5 @@ if __name__ == "__main__":
     url = server+"/api/v1/"+options.coin+"/dsv"
     data = { key: signed_dict[key] for key in keys }
     r = requests.post(url=url, json=data)
-    print("Validation:")
+    print("RPC-client validation:")
     print(r.json())

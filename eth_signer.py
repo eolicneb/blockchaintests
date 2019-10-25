@@ -68,9 +68,9 @@ def __main__():
     import json
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-key', type=str, help='Private key. Should have 32 bytes, but if smaller will be zero left-padded.')
-    parser.add_argument('-message', type=str, help='String to be signed.')
-    parser.add_argument('-coin', type=str, help='Cryptocurrency.')
+    parser.add_argument('--key', type=str, help='Private key. Should have 32 bytes, but if smaller will be zero left-padded.')
+    parser.add_argument('--message', type=str, help='String to be signed.')
+    parser.add_argument('--coin', type=str, help='Cryptocurrency.')
 
     args = parser.parse_args()
 
