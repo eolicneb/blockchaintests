@@ -15,14 +15,14 @@ a = 2
 b = 2
 p = 17
 G = (5, 1)
-n = 18
+n = 19
 
-p = (2**128-3)//76439
-a = int('0xDB7C2ABF62E35E668076BEAD2088', 0)
-b = int('0x659EF8BA043916EEDE8911702B22', 0)
-G = (int('0x09487239995A5EE76B55F9C2F098', 0),
-     int('0xA89CE5AF8724C0A23E0E0FF77500', 0))
-n = int('0xDB7C2ABF62E35E7628DFAC6561C5', 0)
+# p = (2**128-3)//76439
+# a = int('0xDB7C2ABF62E35E668076BEAD2088', 0)
+# b = int('0x659EF8BA043916EEDE8911702B22', 0)
+# G = (int('0x09487239995A5EE76B55F9C2F098', 0),
+#      int('0xA89CE5AF8724C0A23E0E0FF77500', 0))
+# n = int('0xDB7C2ABF62E35E7628DFAC6561C5', 0)
 
 print('p ', p)
 print('a ', a)
@@ -31,27 +31,7 @@ print('Gx ', G[0])
 print('Gy ', G[1])
 print('n ', n)
 
-# n = 10
-
-def modular_inv(n):
-    n = n%p
-    for m in range(1,p):
-        if (m*n)%p == 1:
-            return m
-    return None
-
-def mod_mult_inv_(n, p=p):
-    a, b = p, n%p
-    if a == b:
-        return None
-    rs, qs = [a, b], []
-    while rs[-1] != 0:
-        qs.append(rs[-2]//rs[-1])
-        rs.append(rs[-2] - qs[-1]*rs[-1])    
-    x, y = 1, -(-1)**len(qs)
-    for ix in range(len(qs), 0, -1):
-        x, y = x*qs[ix-1] + y, x
-    return x%p
+from math import log2
 
 def mod_mult_inv(n, p=p):
     a, b = p, n%p
@@ -67,6 +47,8 @@ def mod_mult_inv(n, p=p):
     return x%p
 
 def add(P: tuple, Q: tuple) -> tuple:
+    if P == Q:
+        return times2(P)
     Px, Py = P
     Px, Py = Px%p, Py%p # (mod p)
     Qx, Qy = Q
@@ -92,14 +74,16 @@ def times2(P):
     Ry = int((s*(Px-Rx)-Py)%p)
     return Rx, Ry
 
-from math import log2
-limit_pow = int(log2(n))+1
-G2s = [G]
-for i in range(1, limit_pow):
-    G2s.append(times2(G2s[-1]))
-    # print(i, 2**i, G2s[-1])
+def powers(P):
+    limit_pow = int(log2(n))+1
+    P2s = [P]
+    for i in range(1, limit_pow):
+        P2s.append(times2(P2s[-1]))
+    return P2s
 
-def times_k(k):
+G2s = powers(G)
+
+def times_k(k, G=G):
     if k == 1:
         return G
     Pub = times2(G)
@@ -110,13 +94,26 @@ def times_k(k):
         # print("pub:", Pub)
     return Pub
 
-def fast_times(number):
-    if number < 1 or number >= n:
+def fast_times(number: int,
+               generator: tuple=G
+               ) -> tuple:
+    """
+    Returns the resulting point when multiplying
+    the given generator times the received number.
+    """
+    number %= n
+    if number == 0:
         return None
+    
+    if not generator == G:
+        P2s = powers(generator)
+    else:
+        P2s = G2s
+        
     m, i, adding = number, 0, []
     while m:
         if m & 1:
-            adding.append(G2s[i])
+            adding.append(P2s[i])
         m >>= 1
         i += 1
     Q = adding.pop()
@@ -124,22 +121,104 @@ def fast_times(number):
         Q = add(Q, adding.pop())
     return Q
 
-from time import time
+# SIGNING (ECDSA) FUNCTIONS
 
-REPEAT = 3
-OFFSET = n-10000000
-RANGO = (OFFSET, OFFSET+REPEAT)
+def signing_k(how):
+    from random import randint
+    selector = {
+        'random' : randint(1, n-1),
+        'half' : n//2
+    }
+    return selector[how]
 
-s = time()
-for number in range(*RANGO):
-    Q = fast_times(number)
-    print(number, Q)
+def sign_hash(hash, key, generator=G, prime=p):
+    k = 2 # signing_k('half')
+    inv_k = mod_mult_inv(k, p=n)
+    R = fast_times(k)
+    print("R:\n\t", R)
+    r = R[0]
+    print('hash*G:\n\t', fast_times(hash))
+    print('(r*privKey)*G:\n\t', fast_times(r*key))
+    s = (inv_k*(hash+r*key))
+    print("s ", s)
+    s %= n
 
-print((time()-s)/REPEAT)
+    return r, s
 
-# s = time()
-# for _ in range(REPEAT):
-#     for i in range(*RANGO):
-#         Q = times_k(i)
-#         print(i, Q)
-# print(time()-s)
+def verify_sign_hash(hash, 
+                     pubKey, 
+                     signature, 
+                     generator=G, 
+                     prime=p):
+    r, s = signature
+    inv_s = mod_mult_inv(s, p=n)
+    P = fast_times((hash*inv_s)%n)
+    print('P:\n\t', P)
+    Q = fast_times((r*inv_s)%n, pubKey)
+    print('Q:\n\t', Q)
+    R_ = add(P, Q)
+    print("R_:\n\t", R_)
+    return R_[0] == r
+
+if __name__ == "__main__":
+    from time import time
+
+    guide = {}
+    for i in range(1, n):
+        guide[fast_times(i)] = i
+
+    REPEAT = 3
+    OFFSET = n//2
+    RANGO = (OFFSET, OFFSET+REPEAT)
+
+    s = time()
+    for number in range(*RANGO):
+        Q = fast_times(number)
+        print(number, Q)
+
+    print((time()-s)/REPEAT)
+
+    print("signature!")
+    hash_ = int(3e0)
+    pk = int(4e0)
+    pubKey = fast_times(pk)
+    signature = sign_hash(hash_, pk)
+    validation = verify_sign_hash(hash_, pubKey, signature)
+    print("signature:\n\t", signature)
+    print("valid: ", validation)
+
+    print("\nTests:")
+    priv = 15
+    pubKey = fast_times(priv)
+    hash = 15
+    k = 11
+    R = fast_times(k)
+    r = R[0]
+    inv_k = mod_mult_inv(k)
+    sk = (hash+r*priv)
+    s = (inv_k*sk)%p
+    print(k, inv_k, sk, s)
+    print('r:',r)
+    inv_s = mod_mult_inv(s)
+    ra = (hash*inv_s)%p
+    rb = (r*inv_s)%p
+    P = fast_times(ra)
+    Q = times_k(rb, pubKey)
+    print(times_k(rb, pubKey) == fast_times(rb, pubKey))
+    Q_ = fast_times((rb*priv)%p)
+    R_ = add(P, Q)
+    print(ra, rb, (rb*priv)%p, (ra+rb)%p)
+    print(P, Q, Q_, R_)
+    print(guide.get(Q), guide.get(Q_))
+
+    print("\nadd test:")
+    B = fast_times(3)
+    for i in range(5):
+        B = add(B, B)
+        print(B, guide.get(B))
+
+    # print("\nTest fast_times function:")
+    # P = fast_times(4)
+    # Q = fast_times(12)
+    # S = fast_times(3, P)
+    # print(P, Q, S)
